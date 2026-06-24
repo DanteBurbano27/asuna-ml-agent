@@ -1,4 +1,10 @@
-```gitignore
+﻿# Never publish private Asuna implementation
+app/
+data/
+portable_app/
+scripts/
+launcher/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -8,32 +14,37 @@ __pycache__/
 venv/
 env/
 
-# Jupyter
-.ipynb_checkpoints/
-
-# Environment variables
+# Private config
 .env
 .env.*
+*.json
+!package.json
 
-# OS / IDE
-.DS_Store
-Thumbs.db
+# Data, models, memory
+*.db
+*.sqlite
+*.joblib
+*.pkl
+*.onnx
+*.h5
+*.csv
+*.parquet
+*.xlsx
+
+# Logs and outputs
+logs/
+outputs/
+*.log
+stdout.txt
+stderr.txt
+
+# Archives
+*.zip
+*.rar
+*.7z
+
+# IDE / OS
 .vscode/
 .idea/
-
-# Data and models
-data/raw/
-data/processed/
-*.pkl
-*.joblib
-*.h5
-*.onnx
-
-# Logs
-logs/
-*.log
-
-# Build
-dist/
-build/
-*.egg-info/
+.DS_Store
+Thumbs.db
