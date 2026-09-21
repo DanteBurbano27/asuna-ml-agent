@@ -28,7 +28,7 @@ Batch Scoring & Risk Segmentation
 
 ### Requirements
 - Python 3.10+
-- `scikit-learn`, `pandas`, `pytest`
+- `numpy`, `scikit-learn`, `pandas`, `pytest`
 
 ### Setup
 ```bash

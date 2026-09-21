@@ -1,35 +1,35 @@
 # Architecture Overview
 
-Asuna ML Agent is designed as a structured, deterministic machine learning workflow assistant that guides practitioners through the applied ML lifecycle.
+Asuna ML Agent is an architectural case study for a structured machine learning workflow assistant that guides practitioners through the applied ML lifecycle.
 
 ---
 
-## Conceptual Architecture
+## Architectural Planes & Implementation Status
 
 ```mermaid
 flowchart TD
     User([Practitioner / User])
     
-    subgraph ControlPlane["Control Plane"]
-        Router["Command Router (/project, /load, /target...)"]
+    subgraph Layer1["1. Interaction & State Plane [IMPLEMENTED PUBLICLY IN ASUNA LITE]"]
+        Router["Command Router (/project, /load, /target)"]
         StateMgr["Project State Manager (Active Run, Context)"]
     end
     
-    subgraph ValidationPlane["Validation & Governance Plane"]
-        DataVal["Dataset Validation Layer"]
-        LeakageCheck["Data Leakage Review Layer"]
+    subgraph Layer2["2. Validation & Governance Plane [IMPLEMENTED PUBLICLY IN ASUNA LITE]"]
+        DataVal["Dataset Profiling & Imbalance Audit"]
+        LeakageCheck["Heuristic Leakage Review Layer"]
     end
     
-    subgraph ExecutionPlane["Execution Plane"]
-        Trainer["Training Workflow Layer (Baselines & Contenders)"]
-        Comparator["Model Comparison & Evaluation Layer"]
-        Scorer["Batch & Single-Record Scoring Engine"]
+    subgraph Layer3["3. Execution & Evaluation Plane [IMPLEMENTED PUBLICLY IN ASUNA LITE]"]
+        Trainer["Training Layer (Baseline vs Contender Pipelines)"]
+        Comparator["Evaluation Layer (Stratified Holdout Test)"]
+        Scorer["Batch Scoring Engine (Predicted Probabilities & Tiers)"]
     end
     
-    subgraph BusinessPlane["Business Interpretation Plane"]
-        WhatIf["What-If Simulation Engine"]
-        ROI["ROI & Business Metric Translation"]
-        Prescriber["Prescriptive Recommendation Layer"]
+    subgraph Layer4["4. Decision & Prescriptive Plane [CONCEPTUAL DESIGN / PLANNED]"]
+        WhatIf["What-If Simulation Engine (Conceptual)"]
+        ROI["ROI & Metric Translation (Conceptual)"]
+        Prescriber["Prescriptive Policy Mapper (Conceptual)"]
     end
 
     User -->|CLI Command| Router
@@ -39,37 +39,39 @@ flowchart TD
     LeakageCheck --> Trainer
     Trainer --> Comparator
     Comparator --> Scorer
-    Scorer --> WhatIf
-    WhatIf --> ROI
-    ROI --> Prescriber
-    Prescriber -->|Decision Guidance| User
+    Scorer -.-> WhatIf
+    WhatIf -.-> ROI
+    ROI -.-> Prescriber
+    Prescriber -.->|Decision Guidance| User
 ```
 
 ---
 
-## Key Conceptual Components
+## Component Classification
 
-1. **Command Router**: Parses and validates input commands against the active project state.
-2. **Project State Manager**: Tracks dataset references, target variable bindings, split configurations, and active candidate models.
-3. **Dataset Validation Layer**: Inspects schemas, missing value patterns, and feature distributions.
-4. **Leakage Review Layer**: Systematically screens for identifier columns, future-dated signals, and unnatural target correlations before training.
-5. **Training Workflow Layer**: Orchestrates model training across reproducible pipelines (e.g. linear baselines vs. tree ensembles).
-6. **Comparison Layer**: Evaluates contenders across balanced metrics (ROC-AUC, Precision, Recall, F1, Log-Loss).
-7. **Scoring Workflow Layer**: Generates calibrated probability estimates for incoming records.
-8. **What-If Analysis Layer**: Simulates perturbations to controllable features (e.g., pricing adjustments) to project outcome shifts.
-9. **Prescriptive Layer**: Maps risk scores into recommended business interventions.
+### Verified Public Reference Implementation (`asuna-lite/`)
+1. **Command Router & State Manager**: Coordinates sequential execution (loading -> target binding -> audit -> fit -> compare -> score).
+2. **Dataset Profiling**: Assesses shape, feature data types, and target class balance.
+3. **Leakage Review Layer**: Flags identifier columns (cardinality ~1.0) and zero-variance features prior to model fitting.
+4. **Training Workflow Layer**: Trains reproducible Scikit-Learn pipelines (`ColumnTransformer` with `StandardScaler` and `OneHotEncoder`) across Logistic Regression (baseline) and Random Forest (contender).
+5. **Comparison Layer**: Evaluates contenders on a stratified holdout split across ROC-AUC, F1, Precision, and Recall.
+6. **Scoring Layer**: Computes predicted class probabilities and assigns records into operational risk tiers (`High`, `Medium`, `Low`).
+
+### Conceptual Design Specifications (Not Implemented in Code)
+1. **What-If Simulation Engine**: Conceptual design for perturbing controllable input values (e.g. fee adjustments) to simulate score movement.
+2. **Prescriptive Policy Mapper**: Conceptual rule mapping translating risk tiers into operational retention policies.
+3. **Automated Drift Triggers**: Conceptual monitoring specifications for detecting population score shifts.
 
 ---
 
 ## Design Principles
 
 - **Deterministic Execution**: Workflow commands execute sequentially with explicit prerequisites (e.g., target must be declared before leakage audit).
-- **Business-First Metric Interpretation**: Model results are translated into decision thresholds and expected value, not just raw statistical metrics.
-- **Leakage Prevention by Default**: Checks run before any model training to prevent deceptive benchmark results.
-- **Reproducibility**: Parameter seeds, feature definitions, and data partitions are explicitly recorded.
+- **Leakage Prevention by Default**: Checks run before model fitting to prevent artificial validation inflation.
+- **Reproducible Evaluation**: Preprocessing happens strictly inside pipelines on training splits, evaluated against a stratified test split.
 
 ---
 
-## Public vs. Private Implementation Notice
+## Public Reference Notice
 
-This document describes the high-level architecture and design specifications. The private engine implementation, proprietary models, and internal prompts remain in a private enterprise repository. A simplified reference implementation is available in [`asuna-lite/`](../asuna-lite/).
+> Asuna Lite is a deliberately reduced public reference implementation demonstrating selected workflow concepts. It is not the private Asuna engine.

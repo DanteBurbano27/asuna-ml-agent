@@ -1,0 +1,47 @@
+name: Asuna Lite CI
+
+on:
+  push:
+    branches: ["main", "master", "hardening/**"]
+  pull_request:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Validate Asuna Lite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: asuna-lite/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r asuna-lite/requirements.txt
+
+      - name: Compile and import validation
+        run: |
+          python -m compileall asuna-lite/asuna_lite
+          python -c "import asuna_lite; print(f'Asuna Lite v{asuna_lite.__version__} successfully imported')"
+
+      - name: Run pytest suite
+        run: pytest asuna-lite/tests/ -v
+
+      - name: Run CLI demonstration
+        run: python -m asuna_lite.cli
+        working-directory: asuna-lite

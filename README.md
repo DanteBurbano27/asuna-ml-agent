@@ -1,9 +1,10 @@
 # Asuna ML Agent — Public Architecture Case Study
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue?logo=python)](https://www.python.org/)
 [![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.3%2B-F7931E?logo=scikit-learn)](https://scikit-learn.org/)
-[![Pytest](https://img.shields.io/badge/Tested%20with-Pytest-0A9EDC?logo=pytest)](https://pytest.org/)
-[![Architecture](https://img.shields.io/badge/Design-Case_Study-teal)](#architecture-overview)
+[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=github-actions)](https://github.com/DanteBurbano27/asuna-ml-agent/actions)
+[![Tested with Pytest](https://img.shields.io/badge/Tests-Pytest-0A9EDC?logo=pytest)](https://pytest.org/)
+[![Architecture](https://img.shields.io/badge/Design-Case_Study-teal)](#system-architecture)
 
 A public architecture case study, interaction design specification, and verified reference implementation for an applied machine learning lifecycle assistant.
 
@@ -11,10 +12,10 @@ A public architecture case study, interaction design specification, and verified
 
 ## Important Repository Notice
 
-> **Scope Clarification**: This repository is a public architecture case study and systems design document. It intentionally separates conceptual workflow design and public reference code from the private product engine.
+> **Scope Clarification**: This repository is a public architecture case study and systems design document. It intentionally separates conceptual workflow design from the verified public reference implementation.
 >
-> - **Private Engine Context**: The full Asuna engine is a private product containing proprietary agent orchestrators, multi-tenant model registries, custom drift mitigation triggers, and enterprise connectors.
-> - **Public Repository Scope**: This repository provides the verifiable architectural blueprint, command protocol specifications, data leakage audit methodology, and **Asuna Lite** (`asuna-lite/`), a fully reproducible reference implementation with automated tests.
+> - **Public Reference Scope**: This repository provides the verifiable architectural blueprint, command protocol specifications, data leakage audit methodology, and **Asuna Lite** (`asuna-lite/`), a fully reproducible reference implementation with automated tests.
+> - **Conceptual / Planned Scope**: Advanced components such as interactive counterfactual what-if simulation, automated drift monitoring, and prescriptive policy solvers are documented as conceptual design specifications for future exploration.
 >
 > *Asuna Lite is a deliberately reduced public reference implementation demonstrating selected workflow concepts. It is not the private Asuna engine.*
 
@@ -22,32 +23,32 @@ A public architecture case study, interaction design specification, and verified
 
 ## 1. System Architecture
 
-Asuna structures the predictive analytics lifecycle into four deterministic layers:
+The workflow separates applied predictive modeling into distinct execution planes, explicitly distinguishing what is verifiably implemented from conceptual design:
 
 ```mermaid
 flowchart TD
     User([ML Engineer / Practitioner])
     
-    subgraph Layer1["1. Interaction & State Plane"]
+    subgraph Layer1["1. Interaction & State Plane [IMPLEMENTED IN ASUNA LITE]"]
         CLI["Command Interface (/project, /load, /target)"]
         State["Session State Machine (Dataset, Active Target, Seed)"]
     end
     
-    subgraph Layer2["2. Validation & Governance Plane"]
+    subgraph Layer2["2. Validation & Governance Plane [IMPLEMENTED IN ASUNA LITE]"]
         Profiler["Dataset Profiler & Imbalance Detector"]
-        LeakageAudit["Automated Data Leakage Review"]
+        LeakageAudit["Automated Data Leakage Review (Unique IDs & Constants)"]
     end
     
-    subgraph Layer3["3. Modeling & Evaluation Plane"]
-        Pipeline["Reproducible Pipelines (Preprocessing + Estimators)"]
-        CV["Stratified Cross-Validation & Metric Evaluator"]
-        Comparator["Leaderboard & Champion Selector"]
+    subgraph Layer3["3. Modeling & Evaluation Plane [IMPLEMENTED IN ASUNA LITE]"]
+        Pipeline["Reproducible Pipelines (ColumnTransformer: Scaler + OHE)"]
+        HoldoutEval["Stratified Holdout Evaluation (75/25 Split)"]
+        Comparator["Leaderboard & Champion Selector (ROC-AUC / F1)"]
     end
     
-    subgraph Layer4["4. Decision & Prescriptive Plane"]
-        Scorer["Inference Engine (Probabilities & Risk Deciles)"]
-        WhatIfSim["What-If Counterfactual Simulator"]
-        Prescriber["Prescriptive Policy Mapper (Retention Actions)"]
+    subgraph Layer4["4. Decision & Prescriptive Plane [CONCEPTUAL DESIGN / PLANNED]"]
+        Scorer["Inference Engine: Model Probability Estimates & Tiers [IMPLEMENTED]"]
+        WhatIfSim["What-If Counterfactual Simulator [CONCEPTUAL]"]
+        Prescriber["Prescriptive Policy Mapper [CONCEPTUAL]"]
     end
 
     User -->|Commands| CLI
@@ -55,12 +56,12 @@ flowchart TD
     State --> Profiler
     Profiler --> LeakageAudit
     LeakageAudit -->|Clean Features Only| Pipeline
-    Pipeline --> CV
-    CV --> Comparator
+    Pipeline --> HoldoutEval
+    HoldoutEval --> Comparator
     Comparator -->|Active Model| Scorer
-    Scorer --> WhatIfSim
-    WhatIfSim --> Prescriber
-    Prescriber -->|Decision Guidance| User
+    Scorer -.-> WhatIfSim
+    WhatIfSim -.-> Prescriber
+    Prescriber -.->|Decision Guidance| User
 ```
 
 ---
@@ -74,9 +75,10 @@ sequenceDiagram
     autonumber
     actor Dev as Practitioner
     participant CLI as Command Router
-    participant Gov as Governance / Leakage Audit
-    participant ML as Modeling Engine
-    participant Dec as Decision Layer
+    participant Gov as Governance / Leakage Audit [Implemented]
+    participant ML as Modeling Engine [Implemented]
+    participant Dec as Decision Layer [Implemented]
+    participant Sim as What-If Simulator [Conceptual]
 
     Dev->>CLI: /load <dataset.csv>
     CLI-->>Dev: Ingested rows, schema & types
@@ -86,13 +88,16 @@ sequenceDiagram
     CLI->>Gov: Inspect identifiers, constant features & correlation
     Gov-->>CLI: Leakage report (excluded columns & clean features)
     Dev->>CLI: /train --models baseline,contender
-    CLI->>ML: Fit pipelines on clean features
-    ML-->>CLI: ROC-AUC, F1, Precision, Recall metrics
+    CLI->>ML: Fit pipelines on stratified training split
+    ML-->>CLI: ROC-AUC, F1, Precision, Recall metrics on test split
     Dev->>CLI: /compare
     CLI-->>Dev: Side-by-side leaderboard & champion designation
     Dev->>CLI: /score <unseen_batch.csv>
-    CLI->>Dec: Generate calibrated probabilities
+    CLI->>Dec: Compute predicted class probabilities
     Dec-->>Dev: Risk scores and tiered segmentation (High/Medium/Low)
+    Dev->>CLI: /whatif <feature_perturbation>
+    CLI-->>Sim: counterfactual_evaluation() [Conceptual]
+    Sim-->>Dev: projected_risk_delta [Conceptual]
 ```
 
 ---
@@ -100,29 +105,30 @@ sequenceDiagram
 ## 3. Design Decisions & Rationale
 
 1. **Mandatory Pre-Training Leakage Audit**:
-   - In tabular business problems, data leakage (e.g. including unique customer IDs, post-event timestamps, or proxy variables) produces deceptive evaluation metrics.
+   - In tabular business problems, data leakage (e.g. including unique customer IDs or constant features) produces deceptive evaluation metrics.
    - Asuna enforces an explicit `/leakage` checkpoint before fitting models, isolating target proxies and constant features automatically.
 
-2. **Stratified Preprocessing Pipelines**:
-   - Features are processed strictly within cross-validation folds using Scikit-Learn `ColumnTransformer` (StandardScaler for numericals, OneHotEncoder for categoricals) to prevent data snooping across splits.
+2. **Reproducible Preprocessing Pipelines**:
+   - Feature transformations are executed strictly inside Scikit-Learn `ColumnTransformer` (StandardScaler for numerical features, OneHotEncoder for categoricals) fitted exclusively on training data to prevent data snooping across splits.
 
-3. **Probability Calibration & Tiered Decisioning**:
-   - Rather than outputting raw binary classifications at fixed 0.5 thresholds, the workflow produces probability estimates mapped to business risk tiers (`High`, `Medium`, `Low`). This enables targeted operational interventions (e.g., proactive retention offers for high-risk accounts).
+3. **Predicted Class Probabilities & Tiered Decisioning**:
+   - Rather than outputting uncalibrated binary classifications at arbitrary thresholds, the workflow produces model probability estimates mapped into actionable risk tiers (`High`, `Medium`, `Low`). This enables targeted operational interventions (e.g., proactive retention offers for high-risk accounts).
 
 ---
 
 ## 4. Asuna Lite — Public Reference Implementation
 
-To provide verifiable code evidence, this repository includes [`asuna-lite/`](asuna-lite/):
+To provide concrete, verifiable evidence, this repository includes [`asuna-lite/`](asuna-lite/):
 
 - **Core Package**: `asuna_lite.workflow.AsunaLiteWorkflow`
-- **Capabilities Verified**:
+- **Capabilities Verified in Code**:
   - Synthetic tabular data generation (`generate_synthetic_telecom_data`)
   - Target assignment and class imbalance inspection
   - Automatic detection and exclusion of identifier columns and zero-variance features
-  - Logistic Regression (baseline) vs. Random Forest (contender) comparison
-  - Batch inference with calibrated probability and risk tier output
+  - Logistic Regression (baseline) vs. Random Forest (contender) comparison on a stratified holdout split
+  - Batch inference with model probability estimates and operational risk tier assignment
 - **Automated Tests**: 100% passing test suite using `pytest` (`asuna-lite/tests/test_workflow.py`).
+- **CI Automation**: GitHub Actions CI workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) testing on Python 3.10 and 3.11.
 
 ### Running Asuna Lite Locally
 ```bash
@@ -140,26 +146,26 @@ pytest tests/ -v
 
 ## 5. Security & Privacy Rationale
 
-- **No Proprietary Code Exposure**: Enterprise orchestration engines, database schemas, and private customer datasets are kept strictly outside public version control.
-- **Synthetically Verified Tests**: All public unit tests and CLI demonstrations operate exclusively on deterministically generated synthetic data (`generate_synthetic_telecom_data`), guaranteeing zero leakage of proprietary or personally identifiable information (PII).
-- **Clean Dependency Footprint**: Minimal external dependencies (`pandas`, `scikit-learn`, `pytest`) without unvetted third-party wrappers.
+- **Zero Sensitive Data in Repository**: All unit tests and demonstration scripts operate exclusively on deterministically generated synthetic data (`generate_synthetic_telecom_data`), guaranteeing zero exposure of private or proprietary data.
+- **Explicit Direct Dependencies**: Direct imports (`numpy`, `pandas`, `scikit-learn`, `pytest`) are explicitly declared in `asuna-lite/requirements.txt` to eliminate transitive packaging assumptions.
+- **Transparent Boundaries**: Unimplemented capabilities (what-if engines, drift solvers) are explicitly labeled as conceptual design specifications rather than claimed as live features.
 
 ---
 
 ## 6. System Limitations
 
-- **Tabular Scope**: Designed primarily for structured tabular classification and regression; unstructured audio, video, or raw text parsing requires separate preprocessing pipelines.
-- **Reference Scalability**: `asuna-lite` executes in-memory; distributed dataset processing (e.g. Spark / Ray) is part of the private enterprise architecture.
-- **Human in the Loop**: The assistant provides structured recommendations and audits; domain validation and feature interpretation remain the practitioner's responsibility.
+- **Tabular Scope**: Designed primarily for structured tabular classification; text, audio, and image modalities require external feature extraction.
+- **Reference In-Memory Processing**: `asuna-lite` executes in-memory using Pandas and Scikit-learn; distributed processing frameworks (e.g. Spark / Ray) are not part of this public reference implementation.
+- **Human in the Loop**: The assistant provides structured audits and recommendations; causal validation and domain interpretation remain the practitioner's responsibility.
 
 ---
 
 ## Documentation Directory
 
-- [`docs/architecture.md`](docs/architecture.md): Conceptual architectural layers and module breakdown.
+- [`docs/architecture.md`](docs/architecture.md): Architectural planes, module breakdown, and implementation status.
 - [`docs/commands.md`](docs/commands.md): Command specification across project, validation, training, and business layers.
 - [`docs/technical_scope.md`](docs/technical_scope.md): Included vs. excluded capabilities and system boundaries.
-- [`docs/roadmap.md`](docs/roadmap.md): Evolution timeline and public/private milestones.
+- [`docs/roadmap.md`](docs/roadmap.md): Evolution timeline and public reference vs. conceptual milestones.
 - [`examples/demo_session.md`](examples/demo_session.md): Annotated terminal walkthrough and sequence trace.
 
 ---

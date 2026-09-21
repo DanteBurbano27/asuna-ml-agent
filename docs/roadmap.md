@@ -1,31 +1,27 @@
 # Roadmap & Project Evolution
 
-This roadmap clarifies the division between public case study artifacts and private enterprise capabilities.
+This roadmap clarifies the division between public reference artifacts and conceptual / planned capabilities.
 
 ---
 
-## Public Repository Scope
+## 1. Verified Public Reference Implementation (`asuna-lite/`)
 
-The public repository serves as an architecture specification, design reference, and public demonstration of applied ML engineering principles.
-
-- [x] Initial conceptual architecture documentation
-- [x] Command interface specification
-- [x] End-to-end workflow sequence diagrams
-- [x] `asuna-lite`: Minimal, verified public reference implementation (`scikit-learn`)
-- [x] Automated test suite verifying pipeline reproducibility
-- [ ] Interactive terminal demonstration recording
-- [ ] Extended data drift simulation scripts
+- [x] Public architecture case study and interaction design specifications
+- [x] Command protocol interface definitions
+- [x] Mermaid system architecture and sequence flowcharts
+- [x] Reproducible Scikit-learn reference implementation (`asuna-lite/`)
+- [x] Automated test suite verifying pipeline reproducibility (`pytest`)
+- [x] GitHub Actions CI workflow verifying multi-version Python test runs
 
 ---
 
-## Private Engine Scope
+## 2. Planned / Future Conceptual Design
 
-The private implementation contains proprietary internal IP, enterprise integrations, and specialized agent orchestrators:
+The following capabilities are documented as architectural concepts for future iterations:
 
-- Continuous model retraining triggers based on live drift thresholds
-- Multi-tenant model registry and persistent artifact repository
-- Automated SHAP tree-explainer integrations for tree ensembles
-- Custom prescriptive optimization solvers
-- Enterprise authentication, role-based access control (RBAC), and audit loggers
+- [ ] Automated threshold optimization for custom cost-benefit matrices
+- [ ] Interactive what-if counterfactual feature perturbation CLI
+- [ ] Baseline population stability index (PSI) computation for drift tracking
+- [ ] Direct export of model artifacts to ONNX / PMML formats
 
-*Note: The private engine codebase is not licensed or released in this public showcase.*
+*Note: Conceptual design items are not currently implemented in public source code.*
