@@ -83,17 +83,17 @@ sequenceDiagram
     Dev->>CLI: /load <dataset.csv>
     CLI-->>Dev: Ingested rows, schema & types
     Dev->>CLI: /target <target_variable>
-    CLI-->>Dev: Class distribution & balance audit
+    CLI-->>Dev: Class distribution & balance audit (train/holdout partitioned)
     Dev->>CLI: /leakage
-    CLI->>Gov: Inspect identifiers, constant features & correlation
+    CLI->>Gov: Inspect identifiers, constant features & correlation (training partition only)
     Gov-->>CLI: Leakage report (excluded columns & clean features)
     Dev->>CLI: /train --models baseline,contender
-    CLI->>ML: Fit pipelines on stratified training split
-    ML-->>CLI: ROC-AUC, F1, Precision, Recall metrics on test split
+    CLI->>ML: 5-fold stratified cross-validation on training partition only
+    ML-->>CLI: Candidate CV metrics (ROC-AUC, F1, Precision, Recall)
     Dev->>CLI: /compare
-    CLI-->>Dev: Side-by-side leaderboard & champion designation
+    CLI-->>Dev: Leaderboard, champion selection, and single untouched holdout evaluation
     Dev->>CLI: /score <unseen_batch.csv>
-    CLI->>Dec: Compute predicted class probabilities
+    CLI->>Dec: Compute predicted class probabilities with fold-scoped imputation
     Dec-->>Dev: Risk scores and tiered segmentation (High/Medium/Low)
     Dev->>CLI: /whatif <feature_perturbation>
     CLI-->>Sim: counterfactual_evaluation() [Conceptual]
@@ -104,14 +104,18 @@ sequenceDiagram
 
 ## 3. Design Decisions & Rationale
 
-1. **Mandatory Pre-Training Leakage Audit**:
-   - In tabular business problems, data leakage (e.g. including unique customer IDs or constant features) produces deceptive evaluation metrics.
-   - Asuna enforces an explicit `/leakage` checkpoint before fitting models, isolating target proxies and constant features automatically.
+1. **Strict Statistical Partitioning & Training-Only Screening**:
+   - In tabular business problems, data leakage (e.g. including unique customer IDs, constant features, or calculating correlation across the full dataset) produces deceptive evaluation metrics.
+   - Asuna enforces an immediate train/untouched-holdout split before any data-dependent screening. All variance, cardinality, and correlation checks are executed strictly on the training partition to eliminate lookahead bias.
 
-2. **Reproducible Preprocessing Pipelines**:
-   - Feature transformations are executed strictly inside Scikit-Learn `ColumnTransformer` (StandardScaler for numerical features, OneHotEncoder for categoricals) fitted exclusively on training data to prevent data snooping across splits.
+2. **Training-Only Cross-Validation & Zero Holdout Snooping**:
+   - Model selection is decided strictly by 5-fold stratified cross-validation scores on the training partition.
+   - Candidate models do not evaluate against the holdout set during selection. Only the selected champion model is evaluated exactly once on the untouched holdout test partition.
 
-3. **Predicted Class Probabilities & Tiered Decisioning**:
+3. **Reproducible Preprocessing Pipelines with Fold-Scoped Imputation**:
+   - Feature transformations are executed strictly inside Scikit-Learn `ColumnTransformer` (with `SimpleImputer` and `StandardScaler` for numerical features, and `SimpleImputer` and `OneHotEncoder` for categoricals) fitted exclusively on training folds to prevent data snooping across splits and gracefully handle missing values during inference.
+
+4. **Predicted Class Probabilities & Tiered Decisioning**:
    - Rather than outputting uncalibrated binary classifications at arbitrary thresholds, the workflow produces model probability estimates mapped into actionable risk tiers (`High`, `Medium`, `Low`). This enables targeted operational interventions (e.g., proactive retention offers for high-risk accounts).
 
 ---
@@ -124,10 +128,11 @@ To provide concrete, verifiable evidence, this repository includes [`asuna-lite/
 - **Capabilities Verified in Code**:
   - Synthetic tabular data generation (`generate_synthetic_telecom_data`)
   - Target assignment and class imbalance inspection
-  - Automatic detection and exclusion of identifier columns and zero-variance features
-  - Logistic Regression (baseline) vs. Random Forest (contender) comparison on a stratified holdout split
-  - Batch inference with model probability estimates and operational risk tier assignment
-- **Automated Tests**: 100% passing test suite using `pytest` (`asuna-lite/tests/test_workflow.py`).
+  - Automatic detection and exclusion of identifier columns and zero-variance features on training partition only
+  - 5-fold training cross-validation for Logistic Regression (baseline) vs. Random Forest (contender)
+  - Champion model selection via training CV and single untouched holdout evaluation
+  - Batch inference with model probability estimates, fold-scoped imputation, and operational risk tier assignment
+- **Automated Tests**: 100% passing test suite (9 tests) using `pytest` (`asuna-lite/tests/test_workflow.py`), including holdout isolation regression tests.
 - **CI Automation**: GitHub Actions CI workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) testing on Python 3.10 and 3.11.
 
 ### Running Asuna Lite Locally
