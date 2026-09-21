@@ -1,18 +1,27 @@
-﻿# Roadmap
+# Roadmap & Project Evolution
 
-## Current Public Stage
+This roadmap clarifies the division between public reference artifacts and conceptual / planned capabilities.
 
-Asuna ML Agent is presented publicly as a technical showcase with architectural documentation and command-level explanation.
+---
 
-## Future Ideas
+## 1. Verified Public Reference Implementation (`asuna-lite/`)
 
-- Add sanitized screenshots
-- Add public demo logs
-- Add sample command walkthroughs
-- Add conceptual diagrams
-- Add business use cases
-- Add simplified examples without exposing private logic
+- [x] Public architecture case study and interaction design specifications
+- [x] Command protocol interface definitions
+- [x] Mermaid system architecture and sequence flowcharts
+- [x] Reproducible Scikit-learn reference implementation (`asuna-lite/`)
+- [x] Automated test suite verifying pipeline reproducibility (`pytest`)
+- [x] GitHub Actions CI workflow verifying multi-version Python test runs
 
-## Private Roadmap
+---
 
-The implementation roadmap of the private engine is not published in this repository.
+## 2. Planned / Future Conceptual Design
+
+The following capabilities are documented as architectural concepts for future iterations:
+
+- [ ] Automated threshold optimization for custom cost-benefit matrices
+- [ ] Interactive what-if counterfactual feature perturbation CLI
+- [ ] Baseline population stability index (PSI) computation for drift tracking
+- [ ] Direct export of model artifacts to ONNX / PMML formats
+
+*Note: Conceptual design items are not currently implemented in public source code.*
